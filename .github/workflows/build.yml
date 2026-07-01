@@ -1,0 +1,41 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            artifact: bid-tool-linux
+          - os: windows-latest
+            artifact: bid-tool-windows
+          - os: macos-latest
+            artifact: bid-tool-macos
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller jieba openai trafilatura lxml lxml_html_clean pyyaml requests pdfplumber python-docx
+        shell: bash
+
+      - name: Build
+        run: pyinstaller --onefile --windowed --name="BidTool" desktop.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*
