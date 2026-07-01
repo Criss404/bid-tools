@@ -1,0 +1,33 @@
+# 企业资质信息（填写贵司真实数据）
+# 此文件将被 AI 在生成标书时引用，务必保持准确
+
+company_name: "XX智慧停车科技有限公司"
+legal_rep: "张三"
+registered_capital: "5000万元"
+established: "2018-03-15"
+address: "成都市高新区天府大道XX号"
+
+# 资质证书列表
+qualifications:
+  - name: "电子与智能化工程专业承包壹级"
+    number: "D251XXXXXX"           # 请修改为真实编号
+    valid_until: "2028-12-31"
+    issuer: "四川省住房和城乡建设厅"
+
+  - name: "安全生产许可证"
+    number: "(川)JZ安许证字[2024]XXXXXX"
+    valid_until: "2027-06-30"
+    issuer: "四川省住房和城乡建设厅"
+
+  - name: "ISO9001质量管理体系认证"
+    number: "XXXXXQXXXXX"
+    valid_until: "2027-03-15"
+    issuer: "XX认证中心"
+
+# 核心业务范围
+business_scope:
+  - "智慧停车系统设计与施工"
+  - "车牌识别/车位引导/无感支付"
+  - "安防监控系统工程"
+  - "停车场运营管理"
+  - "充电桩建设与运营"

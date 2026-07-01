@@ -1,0 +1,7 @@
+data/
+__pycache__/
+*.pyc
+~/.bid_tool/
+ai.yml
+sources.yml
+ai_user_models.yml

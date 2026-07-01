@@ -1,0 +1,31 @@
+# 核心团队成员资质（填写真实人员信息）
+# AI 在填写"项目团队配置"章节时引用
+
+members:
+  - name: "李四"
+    role: "项目经理"
+    certs:
+      - name: "一级建造师（机电工程）"
+        number: "川151XXXXXXXXXX"
+        valid_until: "2027-06-30"
+    experience: "15年智能化工程管理经验，负责过8个停车系统项目"
+    projects: ["成都XX商业综合体", "绵阳XX医院"]
+
+  - name: "王五"
+    role: "技术负责人"
+    certs:
+      - name: "高级工程师（电子信息）"
+        number: "XXXXX"
+        valid_until: "长期有效"
+    experience: "12年智慧交通系统设计经验"
+    projects: ["成都XX商业综合体", "重庆XX小区"]
+
+  - name: "赵六"
+    role: "安全负责人"
+    certs:
+      - name: "注册安全工程师"
+        number: "XXXXX"
+        valid_until: "2028-03-31"
+    experience: "10年施工现场安全管理经验"
+
+  # 添加更多人员...
