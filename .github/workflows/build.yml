@@ -38,6 +38,7 @@ jobs:
         run: pip install pyinstaller jieba openai trafilatura lxml lxml_html_clean pyyaml requests pdfplumber python-docx
 
       - name: Build
+        shell: bash
         run: |
           python -m PyInstaller --onefile --windowed --name="BidTool" \
             --add-data "knowledge${{ matrix.sep }}knowledge" \
