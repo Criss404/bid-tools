@@ -9,14 +9,16 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
             artifact: bid-tool-linux
+            sep: ':'
           - os: windows-latest
             artifact: bid-tool-windows
+            sep: ';'
           - os: macos-latest
             artifact: bid-tool-macos
+            sep: ':'
 
     runs-on: ${{ matrix.os }}
 
@@ -28,21 +30,15 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install pyinstaller jieba openai trafilatura lxml lxml_html_clean pyyaml requests pdfplumber python-docx
-        shell: bash
+        run: pip install pyinstaller jieba openai trafilatura lxml lxml_html_clean pyyaml requests pdfplumber python-docx
 
       - name: Build
         run: |
-          SEP=":"
-          if [ "$(expr substr $(uname -s) 1 10)" = "MINGW64_NT" ] || [ "$(expr substr $(uname -s) 1 5)" = "MSYS_" ]; then SEP=";"; fi
-          if [ "$RUNNER_OS" = "Windows" ]; then SEP=";"; fi
           python -m PyInstaller --onefile --windowed --name="BidTool" \
-            --add-data "knowledge${SEP}knowledge" \
-            --add-data "sources.yml${SEP}." \
-            --add-data "ai.yml${SEP}." \
+            --add-data "knowledge${{ matrix.sep }}knowledge" \
+            --add-data "sources.yml${{ matrix.sep }}." \
+            --add-data "ai.yml${{ matrix.sep }}." \
             desktop.py
-        shell: bash
 
       - uses: actions/upload-artifact@v4
         with:
