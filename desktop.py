@@ -1147,34 +1147,55 @@ class BidToolApp:
 
 # ── 入口 ─────────────────────────────────────────────────
 
-def main():
+def _get_resource_dir():
+    """返回资源目录。PyInstaller 打包时在 sys._MEIPASS，否则项目目录。"""
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def _copy_if_missing(src: str, dst: str):
+    """只在目标不存在时复制文件或目录"""
+    if not os.path.exists(dst):
+        if os.path.isdir(src):
+            shutil.copytree(src, dst, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src, dst)
+            # 确保 parent tree 存在覆盖
+            pass  # parent already created by makedirs before
+
+def bootstrap():
+    """首次运行：创建用户目录、建库、复制知识库和配置文件"""
     user_dir = os.path.join(os.path.expanduser("~"), ".bid_tool")
     os.makedirs(os.path.join(user_dir, "data"), exist_ok=True)
     os.makedirs(os.path.join(user_dir, "knowledge"), exist_ok=True)
 
-    # 首次运行：建库 + 种子数据
+    res = _get_resource_dir()
+
+    # 建库（如果不存在）
     if not os.path.exists(DB_PATH):
         print("首次运行，正在初始化数据库...")
         init_database()
         seed_data()
 
-    # 首次运行：复制知识库模板
-    kb_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), "knowledge")
+    # 复制知识库
+    kb_src = os.path.join(res, "knowledge")
     kb_dst = os.path.join(user_dir, "knowledge")
     if os.path.exists(kb_src) and not os.listdir(kb_dst):
         print("正在复制知识库...")
         for item in os.listdir(kb_src):
-            s = os.path.join(kb_src, item)
-            d = os.path.join(kb_dst, item)
-            if os.path.isdir(s): shutil.copytree(s, d, dirs_exist_ok=True)
-            else: shutil.copy2(s, d)
+            _copy_if_missing(os.path.join(kb_src, item), os.path.join(kb_dst, item))
 
-    # 首次运行：复制默认配置
+    # 复制配置文件
     for fname in ["sources.yml", "ai.yml"]:
+        cfg_src = os.path.join(res, fname)
         cfg_dst = os.path.join(user_dir, fname)
-        cfg_src = os.path.join(os.path.dirname(os.path.abspath(__file__)), fname)
-        if not os.path.exists(cfg_dst) and os.path.exists(cfg_src):
-            shutil.copy2(cfg_src, cfg_dst)
+        if os.path.exists(cfg_src):
+            _copy_if_missing(cfg_src, cfg_dst)
+
+
+def main():
+    bootstrap()
 
     root = tk.Tk()
     app = BidToolApp(root)

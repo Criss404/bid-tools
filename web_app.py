@@ -345,12 +345,41 @@ async def api_delete_notice(nid: int):
 
 if __name__ == "__main__":
     from config import DB_PATH, USER_DIR
-    import shutil
+    import shutil, sys
+
+    def _get_res():
+        if getattr(sys, 'frozen', False):
+            return sys._MEIPASS
+        return os.path.dirname(os.path.abspath(__file__))
+
+    res = _get_res()
     os.makedirs(os.path.join(USER_DIR, "data"), exist_ok=True)
+    os.makedirs(os.path.join(USER_DIR, "knowledge"), exist_ok=True)
+
     if not os.path.exists(DB_PATH):
         print("首次运行，正在初始化数据库...")
         from db import init_database, seed_data
         init_database(); seed_data()
+
+    # 复制资源文件（PyInstaller 打包后从 _MEIPASS 复制）
+    for src_path, dst_rel in [
+        (os.path.join(res, "knowledge"), os.path.join(USER_DIR, "knowledge")),
+        (os.path.join(res, "sources.yml"), os.path.join(USER_DIR, "sources.yml")),
+        (os.path.join(res, "ai.yml"), os.path.join(USER_DIR, "ai.yml")),
+    ]:
+        if os.path.exists(src_path):
+            dst = dst_rel
+            if os.path.isdir(src_path):
+                for item in os.listdir(src_path):
+                    s2 = os.path.join(src_path, item)
+                    d2 = os.path.join(dst, item)
+                    if not os.path.exists(d2):
+                        if os.path.isdir(s2): shutil.copytree(s2, d2, dirs_exist_ok=True)
+                        else: shutil.copy2(s2, d2)
+            else:
+                if not os.path.exists(dst):
+                    shutil.copy2(src_path, dst)
+
     print("招投标信息工具 - Web版")
     print("本地: http://localhost:8000")
     print("内网: http://192.168.88.222:8000")
