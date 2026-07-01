@@ -32,14 +32,16 @@ jobs:
           pip install pyinstaller jieba openai trafilatura lxml lxml_html_clean pyyaml requests pdfplumber python-docx
         shell: bash
 
-      - name: Build (Windows)
-        if: runner.os == 'Windows'
-        run: pyinstaller --onefile --windowed --name="BidTool" --add-data "knowledge;knowledge" --add-data "sources.yml;." --add-data "ai.yml;." desktop.py
-        shell: bash
-
-      - name: Build (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: pyinstaller --onefile --windowed --name="BidTool" --add-data "knowledge:knowledge" --add-data "sources.yml:." --add-data "ai.yml:." desktop.py
+      - name: Build
+        run: |
+          SEP=":"
+          if [ "$(expr substr $(uname -s) 1 10)" = "MINGW64_NT" ] || [ "$(expr substr $(uname -s) 1 5)" = "MSYS_" ]; then SEP=";"; fi
+          if [ "$RUNNER_OS" = "Windows" ]; then SEP=";"; fi
+          python -m PyInstaller --onefile --windowed --name="BidTool" \
+            --add-data "knowledge${SEP}knowledge" \
+            --add-data "sources.yml${SEP}." \
+            --add-data "ai.yml${SEP}." \
+            desktop.py
         shell: bash
 
       - uses: actions/upload-artifact@v4
