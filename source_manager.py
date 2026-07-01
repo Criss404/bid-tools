@@ -76,16 +76,23 @@ def toggle_source(url: str) -> bool | None:
     return None
 
 
-def crawl_all_enabled(*, log_callback=None, override_keyword: str = "") -> dict[str, int]:
+def crawl_all_enabled(*, log_callback=None, override_keyword: str = "",
+                      cancel_event=None) -> dict[str, int]:
     """遍历所有启用的源，执行爬取 → 自动入库。
 
     override_keyword: GUI 输入的关键词，覆盖 sources.yml 里的 keyword
+    cancel_event: threading.Event，设了就停止
     返回 {"source_name": 新条数}
     """
     from db import insert_notice
     results = {}
 
     for src in get_enabled_sources():
+        if cancel_event and cancel_event.is_set():
+            if log_callback:
+                log_callback("\n[取消] 用户手动停止")
+            break
+
         stype = src.get("type", "generic")
         name = src.get("name", stype)
         url = src.get("url", "")
@@ -98,7 +105,8 @@ def crawl_all_enabled(*, log_callback=None, override_keyword: str = "") -> dict[
             if stype == "ggzy":
                 from crawlers.ggzy import GgzyCrawler
                 c = GgzyCrawler(keyword_filter=keyword, max_pages=20,
-                                request_interval=1.5, log_callback=log_callback)
+                                request_interval=1.5, log_callback=log_callback,
+                                cancel_event=cancel_event)
                 items = c.crawl()
                 new = sum(1 for it in items if insert_notice(it, auto_tag=True))
                 results[name] = new
@@ -106,7 +114,8 @@ def crawl_all_enabled(*, log_callback=None, override_keyword: str = "") -> dict[
             elif stype == "cebpubservice":
                 from crawlers.cebpubservice import CebCrawler
                 c = CebCrawler(keyword_filter=keyword, max_pages=20, list_pages=10,
-                               request_interval=1.5, log_callback=log_callback)
+                               request_interval=1.5, log_callback=log_callback,
+                               cancel_event=cancel_event)
                 items = c.crawl()
                 new = sum(1 for it in items if insert_notice(it, auto_tag=True))
                 results[name] = new

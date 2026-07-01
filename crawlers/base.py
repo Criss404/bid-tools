@@ -24,17 +24,19 @@ class BaseCrawler(ABC):
 
     def __init__(self, keyword_filter: str = "", max_pages: int = 30,
                  request_interval: float = 2.0,
-                 log_callback=None):
+                 log_callback=None, cancel_event=None):
         """
         keyword_filter: 只返回标题含该关键词的公告（空=全部）
         max_pages: 最多抓多少条详情
         request_interval: 请求间隔（秒）
         log_callback: 日志回调函数，接收 (msg: str)，用于GUI实时日志
+        cancel_event: threading.Event，设了就停止爬取
         """
         self.keyword_filter = keyword_filter
         self.request_interval = request_interval
         self.max_pages = max_pages
         self._log_cb = log_callback
+        self._cancel = cancel_event
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -73,8 +75,14 @@ class BaseCrawler(ABC):
         results = []
         seen = set()
         count = 0
+        fail_streak = 0  # 连续失败计数
 
         for url in urls:
+            # 用户手动停止
+            if self._cancel and self._cancel.is_set():
+                self._log("[取消] 用户手动停止爬取")
+                break
+
             if count >= self.max_pages:
                 break
 
@@ -128,9 +136,13 @@ class BaseCrawler(ABC):
                     break
 
             if success:
+                fail_streak = 0
                 time.sleep(self.request_interval + random.random() * 1.0)
-            elif not success:
-                pass  # 所有重试都已记录日志
+            else:
+                fail_streak += 1
+                if fail_streak >= 3:
+                    self._log(f"[停止] 连续 {fail_streak} 次失败，自动停止")
+                    break
 
         self._log(f"\n[{self.source}] 完成：抓取 {len(results)}/{count} 条")
         return results

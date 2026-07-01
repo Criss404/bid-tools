@@ -84,6 +84,9 @@ class CebCrawler(BaseCrawler):
         for page in range(1, self.list_pages + 1):
             if count >= self.max_pages:
                 break
+            if self._cancel and self._cancel.is_set():
+                self._log("[取消] 用户手动停止")
+                break
 
             url = CEB_LIST + CEB_PARAMS + str(page)
             self._log(f"[{self.source}] 列表页 {page}...")
@@ -104,8 +107,8 @@ class CebCrawler(BaseCrawler):
 
             page_results = 0
             for row in rows:
-                if count >= self.max_pages:
-                    break
+                if count >= self.max_pages: break
+                if self._cancel and self._cancel.is_set(): break
 
                 # 提取 UUID — 只取 32 位 hex（过滤 http:// 这类）
                 uuid_match = re.search(r"urlOpen\('([a-f0-9]{32})'\)", row)

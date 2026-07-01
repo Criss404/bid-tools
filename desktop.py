@@ -37,6 +37,8 @@ class BidToolApp:
         self.root.title("招投标信息工具")
         self.root.geometry("1100x750")
         self.root.minsize(900, 600)
+        self._crawling = False
+        self._cancel_event = None
 
         self._build_header()
         self.notebook = ttk.Notebook(root)
@@ -174,8 +176,9 @@ class BidToolApp:
                   command=self._delete_selected).pack(side=tk.LEFT, padx=2)
         tk.Button(btn_frame, text="导出CSV", font=FONT,
                   command=self._export_csv).pack(side=tk.LEFT, padx=2)
-        tk.Button(btn_frame, text="爬取最新", font=FONT,
-                  command=self._do_crawl, bg="#2c3e50", fg="white").pack(side=tk.LEFT, padx=2)
+        self.crawl_btn = tk.Button(btn_frame, text="爬取最新", font=FONT,
+                                    command=self._do_crawl, bg="#2c3e50", fg="white")
+        self.crawl_btn.pack(side=tk.LEFT, padx=2)
         tk.Button(btn_frame, text="查看日志", font=(FONT[0], 9),
                   command=self._show_crawl_log).pack(side=tk.LEFT, padx=2)
 
@@ -534,28 +537,30 @@ class BidToolApp:
             return None
 
     def _do_crawl(self):
-        """后台爬取 — 不弹窗，状态栏显示进度"""
+        """后台爬取 — 按钮切换到停止模式"""
+        # 已经在爬取中 → 点这个按钮表示要停止
+        if self._crawling:
+            if self._cancel_event:
+                self._cancel_event.set()
+            self._set_crawl_status("正在停止...", "#e67e22")
+            return
+
+        # 开始爬取
+        self._crawling = True
+        self._cancel_event = threading.Event()
+        self.crawl_btn.configure(text="停止", bg="#e53935", fg="white")
+
         self._crawl_log_lines = ["正在爬取...\n"]
         self._set_crawl_status("正在爬取... 0 条", "#888")
 
         def log_cb(msg: str):
             self._crawl_log_lines.append(msg)
-            # 从日志里提取进度 (如 "[1] 招标公告 ...")
-            import re
-            m = re.search(r'完成[：:]\s*抓取\s*(\d+)/(\d+)', msg)
-            if m:
-                self.root.after(0, lambda: self._set_crawl_status(
-                    f"正在爬取... {m.group(1)}/{m.group(2)} 条", "#888"))
-            if "完成" in msg and "抓取" in msg:
-                parts = msg.split("完成：")
-                if len(parts) > 1:
-                    self.root.after(0, lambda: self._set_crawl_status(
-                        f"正在爬取... {parts[1].strip()}", "#888"))
 
         def task():
             try:
                 from source_manager import crawl_all_enabled
-                results = crawl_all_enabled(log_callback=log_cb)
+                results = crawl_all_enabled(log_callback=log_cb,
+                                            cancel_event=self._cancel_event)
                 total = sum(results.values())
                 ok = "成功" if total > 0 else "无新数据"
                 self._crawl_log_lines.append(f"\n总共入库: {total} 条新公告")
@@ -563,13 +568,21 @@ class BidToolApp:
                     self._load_all(),
                     self._refresh_statusbar(),
                     self._set_crawl_status(f"上次爬取: {ok} {total}条",
-                                            "#27ae60" if total > 0 else "#888")
+                                            "#27ae60" if total > 0 else "#888"),
+                    self._crawl_done()
                 ])
             except Exception as e:
                 self._crawl_log_lines.append(f"\n[X] 爬取失败: {e}")
-                self.root.after(0, lambda: self._set_crawl_status(
-                    "上次爬取: 失败", "#c0392b"))
+                self.root.after(0, lambda: [
+                    self._set_crawl_status("上次爬取: 失败", "#c0392b"),
+                    self._crawl_done()
+                ])
         threading.Thread(target=task, daemon=True).start()
+
+    def _crawl_done(self):
+        """恢复按钮状态"""
+        self._crawling = False
+        self.crawl_btn.configure(text="爬取最新", bg="#2c3e50", fg="white")
 
     def _show_crawl_log(self):
         """弹出日志窗口 — 只有用户主动点击时"""
