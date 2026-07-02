@@ -4,11 +4,11 @@
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 
-从 ggzy.gov.cn 和 bulletin.cebpubservice.com 采集招标公告，SQLite 存储，FTS5 全文搜索，tkinter 桌面端，支持 DeepSeek/通义千问/GPT 等大模型 API 辅助分析。
+从招投标平台采集公告数据，SQLite 存储，FTS5 全文搜索，tkinter 桌面端，支持 DeepSeek/通义千问/GPT 等大模型 API 辅助分析和生成标书。
 
 ## 功能
 
-- 爬取 ggzy.gov.cn 首页公告 + cebpubservice.com 翻页列表，自动去重入库
+- 多源爬取招投标公告，自动去重入库
 - 自动打标签（优先级/项目形态/可参与/评分），地区名规范化
 - 全文搜索 + 地区/类型/日期/优先级筛选 + 8 列表头排序
 - 批量删除（Ctrl/Shift 多选）、CSV 导出
@@ -31,19 +31,18 @@ bid_tool/
 ├── bid_writer.py           # 标书生成 (模板 + AI)
 ├── ai_analyzer.py          # AI 分析 (深度/排名/周报/提问)
 ├── ai.py                   # AI 统一调用入口
-├── extractor.py            # trafilatura 网页正文提取
+├── extractor.py            # 网页正文提取
 ├── knowledge_importer.py   # 知识库文件导入 (pdf/docx/md)
 ├── source_manager.py       # 爬虫源配置管理
 ├── report.py               # 统计报告
 ├── config.py               # 全局配置
 ├── crawlers/               # 爬虫
 │   ├── base.py             #   抽象基类 (重试+取消)
-│   ├── ggzy.py             #   ggzy.gov.cn 爬虫
-│   └── cebpubservice.py    #   cebpubservice.com 爬虫
+│   └── ...                 #   各平台适配器
 ├── knowledge/              # 知识库 (AI 标书数据源)
 │   ├── laws/               #   法规
 │   ├── rules/              #   废标/暗标/评分标准
-│   ├── industry/           #   停车行业技术指标
+│   ├── industry/           #   行业技术指标
 │   ├── templates/          #   技术标大纲
 │   └── solutions/          #   技术方案模板
 └── docs/                   # 架构/数据流/市场调研/优化记录
