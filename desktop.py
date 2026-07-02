@@ -688,6 +688,8 @@ class BidToolApp:
         btn_frame.pack(fill=tk.X, padx=8, pady=4)
         tk.Button(btn_frame, text="导出 .md", font=FONT,
                   command=self._export_bid).pack(side=tk.LEFT)
+        tk.Button(btn_frame, text="导出 Word", font=FONT,
+                  command=self._export_bid_docx).pack(side=tk.LEFT)
 
     def _load_bid_notice(self):
         nid_str = self.bid_notice_id.get().strip()
@@ -833,6 +835,26 @@ class BidToolApp:
             f.write(content)
         messagebox.showinfo("导出", f"已保存到 {fname}")
 
+    def _export_bid_docx(self):
+        content = self.bid_preview.get(1.0, tk.END).strip()
+        if not content:
+            return
+        from tkinter import filedialog
+        from bid_writer import export_to_docx
+        ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+        fname = filedialog.asksaveasfilename(
+            title="保存为 Word",
+            defaultextension=".docx",
+            initialfile=f"投标书_{ts}.docx",
+            filetypes=[("Word 文档", "*.docx"), ("所有文件", "*.*")])
+        if not fname:
+            return
+        try:
+            export_to_docx(content, fname)
+            messagebox.showinfo("导出", f"已保存到 {fname}")
+        except Exception as e:
+            messagebox.showerror("导出失败", str(e))
+
     # ═══════════════════════════════════════════
     # Tab3: AI 分析
     # ═══════════════════════════════════════════
@@ -841,35 +863,29 @@ class BidToolApp:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="  AI 分析  ")
 
-        # 左侧操作区
+        # ═══ 左侧：按钮区 ═══
         left = tk.Frame(tab, width=280)
         left.pack(side=tk.LEFT, fill=tk.Y, padx=8, pady=8)
         left.pack_propagate(False)
 
-        # AI 状态 + 设置
-        status_frame = tk.Frame(left)
-        status_frame.pack(fill=tk.X, pady=(0, 8))
-
-        from ai import is_ready, get_config
-        self.ai_status_label = tk.Label(status_frame, font=(FONT[0], 9))
-        self.ai_status_label.pack(side=tk.LEFT)
-        tk.Button(status_frame, text="AI 设置", font=FONT,
-                  command=self._open_ai_settings).pack(side=tk.RIGHT)
+        self.ai_status_label = tk.Label(left, font=(FONT[0], 9))
+        self.ai_status_label.pack(anchor=tk.W)
+        tk.Button(left, text="AI 设置", font=FONT,
+                  command=self._open_ai_settings).pack(anchor=tk.W, pady=(2, 8))
         self._update_ai_status()
 
-        tk.Label(left, text="AI 分析工具", font=FONT_TITLE).pack(anchor=tk.W, pady=(0, 12))
+        tk.Label(left, text="AI 分析工具", font=FONT_TITLE).pack(anchor=tk.W, pady=(0, 10))
 
         buttons = [
-            ("深度分析单条标讯", self._ai_analyze_one, "选中标讯进行五维度深度评估"),
-            ("标讯排名推荐", self._ai_rank, "基于评分标准排序 Top 5 推荐"),
+            ("深度分析单条标讯", self._ai_analyze_one, "选中标讯，五维度深度评估"),
+            ("标讯排名推荐", self._ai_rank, "基于评分标准，Top 5 推荐"),
             ("生成本周周报", self._ai_weekly, "本周标讯概览 + 趋势 + 行动建议"),
-            ("自由提问", self._ai_ask, "基于数据库真实数据回答你的问题"),
         ]
 
         self.ai_buttons = []
         for label, cmd, desc in buttons:
-            frm = tk.Frame(left, bd=1, relief=tk.SOLID, padx=8, pady=6)
-            frm.pack(fill=tk.X, pady=3)
+            frm = tk.Frame(left, bd=1, relief=tk.SOLID, padx=6, pady=4)
+            frm.pack(fill=tk.X, pady=2)
             btn = tk.Button(frm, text=label, font=FONT, command=cmd,
                              bg="#2c3e50", fg="white")
             btn.pack(fill=tk.X)
@@ -877,26 +893,39 @@ class BidToolApp:
             tk.Label(frm, text=desc, font=(FONT[0], 8), fg="#666").pack(anchor=tk.W)
         self._update_ai_buttons()
 
-        tk.Label(left, text="\n标讯 ID（深度分析用）：", font=FONT).pack(anchor=tk.W)
+        tk.Label(left, text="\n标讯 ID：", font=FONT).pack(anchor=tk.W, pady=(8, 0))
         self.ai_notice_id = tk.StringVar()
         tk.Entry(left, textvariable=self.ai_notice_id, font=FONT, width=10).pack(anchor=tk.W, pady=2)
 
-        tk.Label(left, text="\n自由提问：", font=FONT).pack(anchor=tk.W)
-        self.ai_question = tk.StringVar()
-        tk.Entry(left, textvariable=self.ai_question, font=FONT).pack(fill=tk.X, pady=2)
-        tk.Label(left, text="\n例：四川有什么停车项目可投？",
-                  font=(FONT[0], 8), fg="#999").pack(anchor=tk.W)
-
-        # 右侧输出区
+        # ═══ 右侧：对话输出区 ═══
         right = tk.Frame(tab)
-        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 8), pady=8)
+        right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 8), pady=8)
 
-        tk.Label(right, text="分析结果：", font=FONT_BOLD).pack(anchor=tk.W)
-        self.ai_output = scrolledtext.ScrolledText(right, font=("monospace", 9),
-                                                    wrap=tk.WORD)
-        self.ai_output.pack(fill=tk.BOTH, expand=True, pady=4)
-        tk.Button(right, text="清空", font=FONT,
-                  command=lambda: self.ai_output.delete(1.0, tk.END)).pack(anchor=tk.E)
+        tk.Label(right, text="对话", font=FONT_TITLE).pack(anchor=tk.W)
+
+        self.ai_chat_history = scrolledtext.ScrolledText(right, font=("monospace", 9),
+                                                          wrap=tk.WORD)
+        self.ai_chat_history.pack(fill=tk.BOTH, expand=True, pady=4)
+        self.ai_chat_history.tag_configure("separator", foreground="#ccc",
+                                            font=("monospace", 7))
+        self.ai_chat_history.tag_configure("user_bubble", foreground="#1a73e8",
+                                            font=("monospace", 9, "bold"))
+        self.ai_chat_history.tag_configure("ai_bubble", foreground="#333",
+                                            font=("monospace", 9))
+        self.ai_chat_history.tag_configure("thinking", foreground="#888",
+                                            font=("monospace", 9, "italic"))
+
+        input_frame = tk.Frame(right, height=36)
+        input_frame.pack(fill=tk.X, pady=(4, 0))
+        input_frame.pack_propagate(False)
+
+        self.ai_question = tk.StringVar()
+        q_entry = tk.Entry(input_frame, textvariable=self.ai_question, font=FONT)
+        q_entry.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        q_entry.bind("<Return>", lambda e: self._ai_ask())
+
+        tk.Button(input_frame, text="发送", font=FONT, bg="#2c3e50", fg="white",
+                  command=self._ai_ask).pack(side=tk.RIGHT, padx=(4, 0))
 
     def _update_ai_status(self):
         from ai import is_ready, get_config
@@ -1063,26 +1092,31 @@ class BidToolApp:
         tk.Button(btn_frm, text="保存", font=FONT_BOLD, command=on_save,
                    bg="#2c3e50", fg="white").pack(side=tk.LEFT, padx=4)
 
-    def _set_ai_output(self, text: str):
-        self.ai_output.delete(1.0, tk.END)
-        self.ai_output.insert(tk.END, text)
-
-    def _append_ai_output(self, label: str, text: str):
-        from datetime import datetime
-        ts = datetime.now().strftime("%H:%M")
-        sep = "-" * 50
-        self.ai_output.insert(tk.END, f"\n[{ts}] {label}\n{sep}\n{text}\n")
-        self.ai_output.see(tk.END)
-
     def _run_ai_task(self, task_fn, label: str, loading_text: str):
-        self.ai_output.insert(tk.END, f"[{loading_text}]\n")
-        self.ai_output.see(tk.END)
+        import re
+        # 插入思考提示 — 灰色斜体
+        marker_start = self.ai_chat_history.index(tk.END + "-1c")
+        self.ai_chat_history.insert(tk.END, f"  {loading_text}\n\n")
+        self.ai_chat_history.tag_add("thinking", marker_start, tk.END)
+        self.ai_chat_history.see(tk.END)
+
         def work():
             try:
                 r = task_fn()
-                self.root.after(0, lambda: self._append_ai_output(label, r))
+                # 清理 Markdown
+                r = re.sub(r'^#{1,4}\s*', '', r, flags=re.MULTILINE)
+                r = re.sub(r'\*\*(.+?)\*\*', r'\1', r)
+                r = re.sub(r'^>\s*', '', r, flags=re.MULTILINE)
+                self.root.after(0, lambda: [
+                    # 删掉思考提示行
+                    self.ai_chat_history.delete(marker_start, tk.END),
+                    self._append_to_chat("ai", f"{label}\n{r}")
+                ])
             except Exception as e:
-                self.root.after(0, lambda: self._append_ai_output(label, f"[X] {e}"))
+                self.root.after(0, lambda: [
+                    self.ai_chat_history.delete(marker_start, tk.END),
+                    self._append_to_chat("ai", f"[X] {e}")
+                ])
         threading.Thread(target=work, daemon=True).start()
 
     def _ai_analyze_one(self):
@@ -1098,12 +1132,49 @@ class BidToolApp:
     def _ai_weekly(self):
         self._run_ai_task(weekly_report, "本周周报", "AI 生成周报中...")
 
+    def _append_to_chat(self, role: str, text: str):
+        import re
+        text = re.sub(r'^#{1,4}\s*', '', text, flags=re.MULTILINE)
+        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+        text = re.sub(r'^>\s*', '', text, flags=re.MULTILINE)
+        ts = datetime.now().strftime("%H:%M")
+
+        # 分隔线
+        sep = "━" * 50
+        self.ai_chat_history.insert(tk.END, f"\n{sep}\n", "separator")
+
+        # 角色标签 — 你=蓝色, AI=默认
+        is_user = role == "user"
+        tag = "user_bubble" if is_user else "ai_bubble"
+        label = "你" if is_user else "AI"
+        self.ai_chat_history.insert(tk.END, f"[{ts}] {label}:\n", tag)
+        self.ai_chat_history.insert(tk.END, f"{text}\n", tag)
+
+        self.ai_chat_history.see(tk.END)
+
     def _ai_ask(self):
         q = self.ai_question.get().strip()
         if not q:
-            messagebox.showinfo("提示", "请先输入问题")
             return
-        self._run_ai_task(lambda: ask(q), f"提问: {q[:30]}", "AI 思考中...")
+        self.ai_question.set("")
+        self._append_to_chat("user", q)
+        marker = self.ai_chat_history.index(tk.END + "-1c")
+        self.ai_chat_history.insert(tk.END, "  AI 思考中...\n\n")
+        self.ai_chat_history.tag_add("thinking", marker, tk.END)
+        self.ai_chat_history.see(tk.END)
+        def task():
+            try:
+                r = ask(q)
+                self.root.after(0, lambda: [
+                    self.ai_chat_history.delete(marker, tk.END),
+                    self._append_to_chat("ai", r)
+                ])
+            except Exception as e:
+                self.root.after(0, lambda: [
+                    self.ai_chat_history.delete(marker, tk.END),
+                    self._append_to_chat("ai", f"[X] {e}")
+                ])
+        threading.Thread(target=task, daemon=True).start()
 
     # ═══════════════════════════════════════════
     # 底部状态栏

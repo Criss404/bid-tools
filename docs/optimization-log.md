@@ -195,3 +195,25 @@ cebpubservice 特点:
 **当前 VM**: 192.168.88.222:8000 可做内网Web服务器，同局域网可直接浏览器访问
 
 **结论**: 桌面版(PyInstaller) + Web版(web_app.py)两条路独立
+
+### O. 路径改造 + GitHub 打包 (2026-07-02)
+
+**路径改造**: 数据全部移到 ~/.bid_tool/
+- config.py: DB_PATH/KNOWLEDGE_DIR 改指用户目录
+- source_manager/ai/knowledge_importer: 配置文件路径同步
+- desktop.py main(): 首次运行自动建目录+建库+种子+复制知识库和配置
+- bootstrap() + _get_resource_dir(): PyInstaller打包时走 sys._MEIPASS
+
+**GitHub**: 
+- repo: Criss404/bid-tools (私有)
+- CI: GitHub Actions 三平台 PyInstaller 打包 (4次修复迭代)
+
+**CI 修复过程**:
+1. 矩阵 include 去重 (6 job → 3 job)
+2. 加 sys deps (Ubuntu libxml2-dev + python3-tk)
+3. fail-fast: false (Ubuntu失败不连累Windows)
+4. sources.yml/ai.yml 被 .gitignore 排除 → --add-data 报错 → 强制入库
+5. Windows runner 默认 PowerShell → 加 shell: bash
+
+**爬虫取消**: desktop 按钮切换 → source_manager cancel_event → base.py 循环检查 → 连续3次失败自动停止
+**Web版**: web_app.py 重写前端，FastAPI 后端 API 全部就绪

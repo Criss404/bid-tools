@@ -91,7 +91,7 @@ def analyze_one(notice_id: int) -> str:
             temperature=0.3,
             max_tokens=2048
         )
-        return f"## 深度标讯分析\n\n**项目：** {title}\n\n{result}"
+        return f"深度标讯分析\n{'='*40}\n项目：{title}\n\n{result}"
     except RuntimeError as e:
         return f"[X] {e}"
     except Exception as e:
@@ -115,20 +115,20 @@ def rank_opportunities(notice_ids: list[int] | None = None) -> str:
         return ai.chat(
             messages=[
                 {"role": "system",
-                 "content": """你是招投标策略分析师。根据标讯列表，输出：
+                 "content": """你是招投标策略分析师。根据标讯列表，用纯文本格式（不要用Markdown）输出，包含三部分：
 
-## 推荐投标优先级排名（Top 5）
-按"值得投"程度排序，每条说明理由
+一、推荐投标优先级排名（Top 5）
+按值得投的程度排序，每条说明理由
 
-## 市场洞察
-- 区域热度（哪些地区项目密集）
-- 项目类型趋势（EPC/施工/监理占比）
-- 预算区间分布
+二、市场洞察
+  [区域热度] 哪些地区项目密集
+  [项目趋势] EPC/施工/监理占比
+  [预算分布] 区间概述
 
-## 本周行动建议
-- 建议立即跟进的项目
-- 建议观望的项目
-- 建议放弃的项目"""},
+三、本周行动建议
+  [跟进] 建议立即跟进的项目
+  [观望] 建议观望的项目
+  [放弃] 建议放弃的项目"""},
                 {"role": "user",
                  "content": f"请分析这批招标标讯并给出排名和建议：\n\n{data_text}"}
             ],
@@ -154,13 +154,13 @@ def weekly_report() -> str:
                 {"role": "system",
                  "content": f"""你是招标行业市场分析师。数据库概况：总{stats['total']}条，可投标{stats['can_bid']}条。
 
-请生成一份本周招标标讯周报，包含：
+请生成一份本周招标标讯周报，用纯文本格式（不要用Markdown），包含以下部分：
 
-## 本周标讯概览
-## 区域热度地图
-## 重点项目关注
-## 流标/废标分析（如果有）
-## 下周行动计划"""},
+一、本周标讯概览
+二、区域热度分布
+三、重点项目关注
+四、流标/废标分析（如有）
+五、下周行动计划"""},
                 {"role": "user",
                  "content": f"请生成本周招标标讯分析周报：\n\n{data_text}"}
             ],

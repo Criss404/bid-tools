@@ -244,19 +244,125 @@ def gen_bid_ai(notice_id: int) -> str:
     except Exception as e:
         return f"❌ AI 生成失败：{e}"
 
-    header = f"""# 投标文件（技术标）
+    header = f"""投标文件（技术标）
+{'='*50}
 
-**项目名称：** {title}
-**招标类型：** {notice_type}
-**项目地区：** {region}
-**预算金额：** {budget}
-**发布日期：** {pub_date}
-**生成时间：** {datetime.now().strftime('%Y-%m-%d %H:%M')}
-**生成方式：** AI 增强（DeepSeek）{' + 知识库' if has_knowledge else ''}
+项目名称：{title}
+招标类型：{notice_type}
+项目地区：{region}
+预算金额：{budget}
+发布日期：{pub_date}
+生成时间：{datetime.now().strftime('%Y-%m-%d %H:%M')}
+生成方式：AI 增强（DeepSeek）{' + 知识库' if has_knowledge else ''}
 
-> ⚠️ 本文件为 AI 初稿，**黑色标注内容必须人工核实**。报价、签章、资质原件必须人工提供。
+[!] 本文件为 AI 初稿，黑色标注内容必须人工核实。
+    报价、签章、资质原件必须人工提供。
 
----
+{'='*50}
 
 """
+    # AI 返回的正文可能含 Markdown，清理 `#` 符号
+    body = re.sub(r'^#+\s*', '', body, flags=re.MULTILINE)
+    body = re.sub(r'\*\*(.+?)\*\*', r'\1', body)
     return header + body + "\n\n" + _checklist_section()
+
+
+# ── Word 文档导出 ──
+
+def export_to_docx(text: str, filepath: str):
+    """将标书纯文本转换为 Word 文档。
+
+    识别规则：
+        - 以「一、二、三...」开头 → Heading 1
+        - 以「───」「===」或分隔符开头 → 跳过
+        - 以「[!]」开头 → 警告样式（红色加粗）
+        - 以「[N]」开头 → 清单项（缩进）
+        - 其他 → 正文段落
+    """
+    from docx import Document
+    from docx.shared import Pt, Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    doc = Document()
+
+    # 默认字体
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = '宋体'
+    font.size = Pt(11)
+
+    lines = text.split('\n')
+
+    for line in lines:
+        line = line.rstrip()
+
+        # 跳过空行
+        if not line:
+            continue
+
+        # 标题：一、二、三... 或 ## 开头
+        if re.match(r'^[一二三四五六七八九十]、', line) or re.match(r'^##?\s', line):
+            h = doc.add_heading('', level=1)
+            run = h.add_run(re.sub(r'^##?\s*', '', line))
+            run.font.size = Pt(16)
+            run.font.bold = True
+            continue
+
+        # 分隔线
+        if re.match(r'^[-=]{10,}', line):
+            doc.add_paragraph('─' * 50)
+            continue
+
+        # 主标题（如"投标文件（技术标）"）
+        if '投标文件' in line and '技术标' in line:
+            h = doc.add_heading('', level=0)
+            run = h.add_run(line)
+            run.font.size = Pt(18)
+            run.font.bold = True
+            continue
+
+        # 元数据行：项目名称：xxx
+        if re.match(r'^(项目名称|招标类型|项目地区|预算金额|发布日期|生成时间)：', line):
+            p = doc.add_paragraph()
+            p.paragraph_format.space_after = Pt(2)
+            run = p.add_run(line)
+            run.font.size = Pt(11)
+            continue
+
+        # 警告
+        if line.startswith('[!]'):
+            p = doc.add_paragraph()
+            run = p.add_run(line)
+            run.font.color.rgb = RGBColor(0xC0, 0x39, 0x2B)
+            run.font.bold = True
+            run.font.size = Pt(10)
+            continue
+
+        # 审核清单：[1] xxx  [  ]
+        if re.match(r'^\s*\[\d+\]', line):
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Inches(0.3)
+            run = p.add_run(line)
+            run.font.size = Pt(10)
+            continue
+
+        # 审核清单标题
+        if '审核清单' in line:
+            h = doc.add_heading('审核清单', level=1)
+            continue
+
+        # 法律风险提示
+        if '法律风险' in line:
+            p = doc.add_paragraph()
+            run = p.add_run(line)
+            run.font.color.rgb = RGBColor(0xC0, 0x39, 0x2B)
+            run.font.size = Pt(9)
+            continue
+
+        # 正文
+        if len(line.strip()) > 3:
+            p = doc.add_paragraph()
+            run = p.add_run(line)
+            run.font.size = Pt(11)
+
+    doc.save(filepath)
