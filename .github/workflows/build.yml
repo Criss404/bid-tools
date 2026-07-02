@@ -40,7 +40,7 @@ jobs:
       - name: Build
         shell: bash
         run: |
-          python -m PyInstaller --onefile --windowed --name="BidTool" \
+          python -m PyInstaller --onefile --windowed --name="${{ matrix.artifact }}" \
             --add-data "knowledge${{ matrix.sep }}knowledge" \
             --add-data "sources.yml${{ matrix.sep }}." \
             --add-data "ai.yml${{ matrix.sep }}." \
@@ -50,3 +50,19 @@ jobs:
         with:
           name: ${{ matrix.artifact }}
           path: dist/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: BidTool*
+          tag_name: v${{ github.run_number }}
+          name: Build #${{ github.run_number }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
