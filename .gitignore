@@ -3,3 +3,4 @@ __pycache__/
 *.pyc
 ~/.bid_tool/
 ai_user_models.yml
+*.csv
